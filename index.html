@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <!-- phone window -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>p5.js test</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+  <style>
+    * {
+      touch-action: none; /* prohibit scroll */
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #0d1117;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    /* ui */
+    #test-ui {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 12px 20px;
+      border-radius: 20px;
+      color: white;
+      display: flex;
+      gap: 15px;
+      align-items: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      z-index: 100;
+    }
+    #test-ui label {
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- sliders -->
+  <div id="test-ui">
+    <label>
+      <input type="checkbox" id="sim-switch" checked>
+      Power Switch
+    </label>
+    <label>
+      Potentiometer:
+      <input type="range" id="sim-pot" min="0" max="4095" value="2048">
+    </label>
+  </div>
+
+<script>
+  let isPowerOn = true;
+  let potValue = 2048; 
+
+  function setup() {
+    createCanvas(windowWidth, windowHeight);
+    const simSwitch = document.getElementById('sim-switch');
+    const simPot = document.getElementById('sim-pot');
+
+    simSwitch.addEventListener('change', (e) => {
+      isPowerOn = e.target.checked;
+    });
+
+    simPot.addEventListener('input', (e) => {
+      potValue = parseInt(e.target.value);
+    });
+  }
+
+  function draw() {
+    if (isPowerOn) {
+      background(15, 23, 42); 
+    } else {
+      background(5, 5, 5);  
+
+    let minSize = 50;
+    let maxSize = min(width, height) * 0.8;
+    let ballSize = map(potValue, 0, 4095, minSize, maxSize);
+
+
+    translate(width / 2, height / 2);
+
+    if (isPowerOn) {
+      let glowSize = ballSize + sin(frameCount * 0.05) * 10;
+      
+      noStroke();
+      fill(56, 189, 248, 50); 
+      ellipse(0, 0, glowSize + 20, glowSize + 20);
+
+      fill(56, 189, 248);    
+      ellipse(0, 0, ballSize, ballSize);
+
+      fill(255);              
+      ellipse(-ballSize * 0.15, -ballSize * 0.15, ballSize * 0.2, ballSize * 0.2);
+    } else {
+      noFill();
+      stroke(100, 116, 139);
+      strokeWeight(2);
+      ellipse(0, 0, ballSize, ballSize);
+      
+
+      stroke(239, 68, 68);
+      strokeWeight(3);
+      line(-15, -15, 15, 15);
+      line(15, -15, -15, 15);
+    }
+
+
+    resetMatrix();
+    drawHUD();
+  }
+
+  function drawHUD() {
+    fill(255);
+    noStroke();
+    textSize(14);
+    textAlign(LEFT, TOP);
+
+    text(`STATUS: ${isPowerOn ? 'ON' : 'OFF'}`, 20, 30);
+    text(`POT VALUE: ${potValue} / 4095`, 20, 50);
+  }
+
+  function windowResized() {
+    resizeCanvas(windowWidth, windowHeight);
+  }
+</script>
+</body>
+</html>
