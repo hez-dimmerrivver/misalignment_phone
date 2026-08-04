@@ -9,7 +9,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <!-- top bar -->
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="p5.js裝置">
+  <meta name="apple-mobile-web-app-title" content="p5.js">
 
   <script src="https://cdn.jsdelivr.net/npm/p5@1.9.0/lib/p5.js"></script>
   <style>
@@ -74,7 +74,7 @@ function setup() {
 
   // 建立 IP 輸入框與連線按鈕
   createSpan('ESP32 IP: ');
-  ipInput = createInput('192.168.1.100'); // 改成你的 ESP32 實際 IP
+  ipInput = createInput('192.168.1.62'); // 改成你的 ESP32 實際 IP
   ipInput.position(80, 10);
   
   connectBtn = createButton('Wi-Fi 連線');
