@@ -3,11 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>p5.js test</title>
+  <title>p5.js ESP32 Control</title>
 
   <!-- iOS Web App full screen -->
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <!-- top bar -->
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="p5.js">
 
@@ -52,18 +51,18 @@
 
   <div id="test-ui">
     <label>
-      <input type="checkbox" id="sim-switch" checked>
+      <input type="checkbox" id="sim-switch">
       Power Switch
     </label>
     <label>
       Potentiometer:
-      <input type="range" id="sim-pot" min="0" max="4095" value="2048">
+      <input type="range" id="sim-pot" min="0" max="4095" value="0">
     </label>
   </div>
 
 <script>
-  let socket;
-let ipInput, connectBtn;
+let socket;
+let ipInput, connectBtn, statusSpan;
 
 // 接收 ESP32 傳來的狀態
 let jammingState = 0; // 0 或 1
@@ -72,14 +71,31 @@ let spoofingVal = 0;  // 0 ~ 4095
 function setup() {
   createCanvas(600, 400);
 
-  // 建立 IP 輸入框與連線按鈕
-  createSpan('ESP32 IP: ');
-  ipInput = createInput('192.168.1.62'); // 改成你的 ESP32 實際 IP
+  // 建立 UI 控制項
+  createSpan('ESP32 IP: ').position(10, 10).style('color', 'white');
+  ipInput = createInput('192.168.1.62'); 
   ipInput.position(80, 10);
   
   connectBtn = createButton('Wi-Fi 連線');
   connectBtn.position(240, 10);
   connectBtn.mousePressed(initWebSocket);
+
+  statusSpan = createSpan(' 狀態: 未連線');
+  statusSpan.position(320, 10);
+  statusSpan.style('color', '#ff5555');
+
+  // 本地 UI 模擬輸入監聽
+  select('#sim-switch').changed(function() {
+    if(!socket || socket.readyState !== WebSocket.OPEN) {
+      jammingState = this.checked() ? 1 : 0;
+    }
+  });
+
+  select('#sim-pot').input(function() {
+    if(!socket || socket.readyState !== WebSocket.OPEN) {
+      spoofingVal = parseInt(this.value());
+    }
+  });
 }
 
 function draw() {
@@ -98,7 +114,7 @@ function draw() {
   textAlign(CENTER, CENTER);
   text(jammingState ? "JAMMING" : "OFF", 150, 125);
 
-  // 2. 滑桿視覺範例 (0 ~ 4095 對應到 畫面寬度)
+  // 2. 滑桿視覺範例
   let barWidth = map(spoofingVal, 0, 4095, 0, width - 200);
   
   fill(50, 200, 255);
@@ -118,29 +134,51 @@ function draw() {
 
 // 💡 建立 WebSocket 連線
 function initWebSocket() {
-  let ip = ipInput.value();
-  let wsUrl = `ws://${ip}:81`; // WebSocket 連接 ESP32 的 81 Port
+  let ip = ipInput.value().trim();
+  let wsUrl = `ws://${ip}:81`;
 
-  console.log("Connecting to " + wsUrl);
-  socket = new WebSocket(wsUrl);
+  statusSpan.html(' 狀態: 連線中...');
+  statusSpan.style('color', '#ffaa00');
 
-  socket.onopen = function() {
-    console.log("Connected via Wi-Fi!");
-  };
+  if(socket) socket.close();
 
-  socket.onmessage = function(event) {
-    try {
-      let data = JSON.parse(event.data);
-      jammingState = data.sw;
-      spoofingVal = data.pot;
-    } catch (e) {
-      console.error("JSON Error", e);
-    }
-  };
+  try {
+    socket = new WebSocket(wsUrl);
 
-  socket.onclose = function() {
-    console.log("Disconnected from ESP32");
-  };
+    socket.onopen = function() {
+      console.log("Connected via Wi-Fi!");
+      statusSpan.html(' 狀態: 已連線！');
+      statusSpan.style('color', '#55ff55');
+    };
+
+    socket.onmessage = function(event) {
+      try {
+        let data = JSON.parse(event.data);
+        jammingState = data.sw;
+        spoofingVal = data.pot;
+
+        // 同步更新 UI 模擬器
+        select('#sim-switch').elt.checked = (jammingState === 1);
+        select('#sim-pot').elt.value = spoofingVal;
+      } catch (e) {
+        console.error("JSON Error", e);
+      }
+    };
+
+    socket.onerror = function(error) {
+      console.error("WebSocket Error: ", error);
+      statusSpan.html(' 狀態: 連線失敗 (請檢查 IP/混合內容)');
+      statusSpan.style('color', '#ff5555');
+    };
+
+    socket.onclose = function() {
+      console.log("Disconnected");
+      statusSpan.html(' 狀態: 已斷開');
+      statusSpan.style('color', '#ff5555');
+    };
+  } catch(e) {
+    statusSpan.html(' 狀態: 語法錯誤');
+  }
 }
 </script>
 </body>
