@@ -62,78 +62,86 @@
   </div>
 
 <script>
-  let isPowerOn = true;
-  let potValue = 2048;
+  let socket;
+let ipInput, connectBtn;
 
-  function setup() {
-    createCanvas(windowWidth, windowHeight);
-    
-    const simSwitch = document.getElementById('sim-switch');
-    const simPot = document.getElementById('sim-pot');
+// 接收 ESP32 傳來的狀態
+let jammingState = 0; // 0 或 1
+let spoofingVal = 0;  // 0 ~ 4095
 
-    simSwitch.addEventListener('change', (e) => {
-      isPowerOn = e.target.checked;
-    });
+function setup() {
+  createCanvas(600, 400);
 
-    simPot.addEventListener('input', (e) => {
-      potValue = parseInt(e.target.value);
-    });
+  // 建立 IP 輸入框與連線按鈕
+  createSpan('ESP32 IP: ');
+  ipInput = createInput('192.168.1.100'); // 改成你的 ESP32 實際 IP
+  ipInput.position(80, 10);
+  
+  connectBtn = createButton('Wi-Fi 連線');
+  connectBtn.position(240, 10);
+  connectBtn.mousePressed(initWebSocket);
+}
+
+function draw() {
+  background(30);
+
+  // 1. 開關視覺範例
+  if (jammingState === 1) {
+    fill(255, 50, 50);
+  } else {
+    fill(80);
   }
+  rect(100, 100, 100, 50, 10);
+  
+  fill(255);
+  textSize(20);
+  textAlign(CENTER, CENTER);
+  text(jammingState ? "JAMMING" : "OFF", 150, 125);
 
-  function draw() {
-    if (isPowerOn) {
-      background(15, 23, 42);
-    } else {
-      background(5, 5, 5);
+  // 2. 滑桿視覺範例 (0 ~ 4095 對應到 畫面寬度)
+  let barWidth = map(spoofingVal, 0, 4095, 0, width - 200);
+  
+  fill(50, 200, 255);
+  rect(100, 200, barWidth, 30);
+  
+  noFill();
+  stroke(255);
+  rect(100, 200, width - 200, 30);
+
+  // 數值顯示
+  noStroke();
+  fill(255);
+  textAlign(LEFT);
+  textSize(16);
+  text(`SPOOFING Value: ${spoofingVal}`, 100, 260);
+}
+
+// 💡 建立 WebSocket 連線
+function initWebSocket() {
+  let ip = ipInput.value();
+  let wsUrl = `ws://${ip}:81`; // WebSocket 連接 ESP32 的 81 Port
+
+  console.log("Connecting to " + wsUrl);
+  socket = new WebSocket(wsUrl);
+
+  socket.onopen = function() {
+    console.log("Connected via Wi-Fi!");
+  };
+
+  socket.onmessage = function(event) {
+    try {
+      let data = JSON.parse(event.data);
+      jammingState = data.sw;
+      spoofingVal = data.pot;
+    } catch (e) {
+      console.error("JSON Error", e);
     }
+  };
 
-    let minSize = 50;
-    let maxSize = min(width, height) * 0.8;
-    let ballSize = map(potValue, 0, 4095, minSize, maxSize);
-
-    translate(width / 2, height / 2);
-
-    if (isPowerOn) {
-      let glowSize = ballSize + sin(frameCount * 0.05) * 10;
-      
-      noStroke();
-      fill(56, 189, 248, 50);
-      ellipse(0, 0, glowSize + 20, glowSize + 20);
-
-      fill(56, 189, 248);
-      ellipse(0, 0, ballSize, ballSize);
-
-      fill(255);
-      ellipse(-ballSize * 0.15, -ballSize * 0.15, ballSize * 0.2, ballSize * 0.2);
-    } else {
-      noFill();
-      stroke(100, 116, 139);
-      strokeWeight(2);
-      ellipse(0, 0, ballSize, ballSize);
-      
-      stroke(239, 68, 68);
-      strokeWeight(3);
-      line(-15, -15, 15, 15);
-      line(15, -15, -15, 15);
-    }
-
-    resetMatrix();
-    drawHUD();
-  }
-
-  function drawHUD() {
-    fill(255);
-    noStroke();
-    textSize(14);
-    textAlign(LEFT, TOP);
-    
-    text(`STATUS: ${isPowerOn ? 'ON' : 'OFF'}`, 20, 30);
-    text(`POT VALUE: ${potValue} / 4095`, 20, 50);
-  }
-
-  function windowResized() {
-    resizeCanvas(windowWidth, windowHeight);
-  }
+  socket.onclose = function() {
+    console.log("Disconnected from ESP32");
+  };
+}
 </script>
 </body>
 </html>
